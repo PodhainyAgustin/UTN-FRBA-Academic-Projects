@@ -1,0 +1,78 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+int tablaTransicion [7][6] = {{1,2,2,6,6,6},{5,5,6,6,3,6},{2,2,2,6,6,6},{4,4,4,4,6,6},{4,4,4,4,6,6},{5,5,6,6,6,6},{6,6,6,6,6,6}};
+
+int recorrerEstados(int estado, char caracter, int &termino);
+
+const char* verEstado(int estado);
+
+void recorrerArchivo(FILE* archivoEntrada, FILE* archivoSalida);
+
+
+
+int main(){
+    FILE* archivoEntrada;
+    FILE* archivoSalida;
+    archivoEntrada = fopen("entrada.txt","r");
+    archivoSalida = fopen("salida.txt", "w");
+    recorrerArchivo(archivoEntrada, archivoSalida);
+    system("PAUSE");
+    fclose(archivoEntrada);
+    fclose(archivoSalida);
+    return 0;
+}
+
+int recorrerEstados(int estado, char caracter, int &termino){
+        if (caracter=='0'){ return tablaTransicion[estado][0];} 
+        if (caracter>='1' && caracter<= '7'){ return tablaTransicion[estado][1];} 
+        if (caracter =='8' || caracter == '9'){ return tablaTransicion[estado][2];} 
+        if ((caracter >= 'a' && caracter <='f')||(caracter >='A' && caracter <='F')){return tablaTransicion[estado][3];}
+        if (caracter == 'x' || caracter == 'X')return tablaTransicion[estado][4];  
+        if (caracter == ','){ termino = 1; return estado;}
+        return tablaTransicion[estado][5];
+}   
+
+const char* verEstado(int estado){
+    const char* tipo;
+    switch(estado){
+        case 2: tipo = "DECIMAL"; break;
+        case 1: tipo = "OCTAL"; break;
+        case 5: tipo = "OCTAL"; break;
+        case 4: tipo = "HEXADECIMAL";break;
+        default: tipo = "NO RECONOCIDO";
+    }
+    return tipo;
+}
+
+void recorrerArchivo(FILE* archivoEntrada, FILE* archivoSalida){
+    char caracter;
+    int termino = 0;
+    int estado=0;
+    int i = 20;
+
+   while(fread(&caracter,sizeof(char),1,archivoEntrada)) {
+       estado = recorrerEstados(estado,caracter,termino);
+
+       if(termino!=1){
+       i--;
+       fprintf(archivoSalida,"%c",caracter);
+       } 
+       if(termino==1){
+        termino=0;
+        for(;i>0;i--){
+        fprintf(archivoSalida," ",caracter,"\n");
+        }
+        fprintf(archivoSalida,"%s\n", verEstado(estado));
+        estado=0;
+        i = 20;
+       }
+    }
+
+    if (caracter != ','){
+        for(;i>0;i--){
+        fprintf(archivoSalida," ",caracter,"\n");}
+        fprintf(archivoSalida,"%s\n", verEstado(estado));
+    }
+}

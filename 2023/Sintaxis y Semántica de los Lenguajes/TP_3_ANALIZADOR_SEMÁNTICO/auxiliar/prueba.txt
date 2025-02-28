@@ -1,0 +1,111 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h> 
+#include "misfunciones.h"
+#include "prueba.tab.h"
+
+int tipoSent;
+NodoSentencias* listaSentencias = NULL;
+extern int yylineno;
+extern FILE *yyin;
+int yylex();
+int yywrap(){
+	return(1);
+}
+
+void yyerror (char const *s) {
+   fprintf (stderr, "%s\n", s);
+}
+%}
+
+%union {
+    int dval;
+    int nroLinea;
+  
+}
+
+%error-verbose
+%locations
+
+%token <dval> NUM
+%token <str> RETURN
+%token <str> DO
+%token <str> WHILE
+%token <str> IF
+%token <str> ELSE
+%token <str> FOR
+%type<dval> exp
+
+
+%%
+
+input
+    :
+    | input sentencia
+;
+
+sentencia
+        : sentenciaCompuesta
+        | sentenciaExpresion 
+        | sentenciaSalto    
+        | sentenciaIteracion
+        | sentenciaSeleccion
+;
+
+sentenciaCompuesta
+                :'{'{tipoSent=1; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno);}  sentencias'}' //falta agregar las declaraciones
+;
+
+sentencias: | sentencias sentencia ; //falta agregar las declaraciones
+
+
+sentenciaExpresion
+                :  {tipoSent=2; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno);} opc';'
+;
+
+sentenciaSalto
+                : RETURN {tipoSent=5; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno);} opc';'
+;
+opc: | exp ;
+
+sentenciaIteracion
+                : WHILE{tipoSent=4; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno)}'('exp')' sentencia
+                | DO {tipoSent=4; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno)} sentencia WHILE'('exp')'';'
+                | FOR{tipoSent=4; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno)}'('expresionFor')' sentencia
+;
+
+expresionFor :  ';' ';'
+               | exp';'exp';' exp
+               | opc';'opc';'opc //ver si se consideran todas
+;
+
+sentenciaSeleccion
+                : IF{tipoSent=3; agregarNodoSentencia(&listaSentencias,tipoSent,yylineno)}'('exp')' sentencia opcionElse
+;
+
+opcionElse:  ELSE sentencia | /* vacio */
+
+exp: NUM {$<dval>$=$<dval>1;}
+
+%%
+int main ()
+{ 
+    yyin = fopen ("testExp.txt", "r");
+     if (yyin == NULL) {
+        printf("Error al abrir el archivo\n");
+        return 1;
+     }
+
+    yyparse();
+
+    printf("Lectura y análisis del archivo completado.\n");
+
+    mostrarListaSent(listaSentencias);
+
+    fclose(yyin);
+
+    getchar();
+    return 0;
+}
